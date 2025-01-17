@@ -1,55 +1,77 @@
- MotorRelayControlForSutter.ino
-This IoT project controls a relay and a stepper motor rotation. The system is designed to activate the relay and trigger motor rotations using serial commands, making it suitable for automation and motor control Sutter.
- IoT Relay and Stepper Motor Control System
+// Relay and Motor Pins
+const int relayPin = 26;  // Relay connected to GPIO 26
 
- Overview
-This IoT project controls a relay and a stepper motor using an Arduino-based system. The project is designed to activate the relay and trigger motor rotations through serial commands, making it ideal for automation and motor control setups.
+// Stepper Motor Pins
+const int dirPin = 18;    // Direction pin
+const int stepPin = 19;   // Step pulse pin
+const int enPin = 21;     // Enable pin
 
- Features
-- Relay Control**: Activate a relay for a specified duration using serial commands.
-- Stepper Motor Control: Perform motor rotations in both clockwise and counterclockwise directions, replacing traditional LED blinking indicators.
-- Serial Command Interface**: Simple command-based interaction for relay and motor operations.
+// Serial Input Variable
+String incomingCommand;
 
- How It Works
-1. The system listens for serial commands via the serial monitor.
-2. Sending the command `1000` initiates the following sequence:
-   - Activates the relay for 1 second.
-   - Starts a stepper motor rotation:
-     - Clockwise for a specified number of steps.
-     - Pauses briefly.
-     - Counterclockwise for the same number of steps.
-3. The motor rotation replaces traditional LED blinking as an indicator of the system's activity.
+void setup() {
+  // Initialize Relay Pin
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, HIGH);  // Ensure relay is off initially
 
- Hardware Requirements
-- Microcontroller: Arduino (or compatible device)
-- Relay Module
-- Stepper Motor: With driver (e.g., A4988 or similar)
-- Power Supply: As per the motor and relay specifications
-- Connecting wires and a breadboard (optional)
+  // Initialize Stepper Motor Pins
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
+  pinMode(enPin, OUTPUT);
+  digitalWrite(enPin, LOW);  // Enable stepper driver (LOW to enable)
 
- Software Requirements
-- Arduino IDE
-- Serial Monitor (or any terminal software)
+  // Start Serial Communication
+  Serial.begin(115200);
+  Serial.println("System Initialized.");
+  Serial.println("Send '1000' to activate the relay and rotate the motor.");
+}
 
- Usage Instructions
-1. Setup:
-   - Connect the relay and stepper motor according to the pin configuration.
-   - Upload the `MotorRelayControl.ino` file to your Arduino board.
-2. Run:
-   - Open the serial monitor at `115200` baud rate.
-   - Send the command `1000` to initiate the relay and motor sequence.
-3. Observe:
-   - The relay activates for 1 second.
-   - The stepper motor performs rotations in both directions.
+void startMotor(int speedDelayMicroseconds, int steps) {
+  // Rotate Motor Clockwise
+  Serial.println("Motor rotating clockwise...");
+  digitalWrite(dirPin, HIGH); // Set direction
+  for (int x = 0; x < steps; x++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(speedDelayMicroseconds);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(speedDelayMicroseconds);
+  }
 
- Example Command
-- Command: `1000`
-  - Activates the relay for 1 second.
-  - Rotates the motor clockwise and counterclockwise.
+  delay(5000); // Pause before reversing direction
 
- Applications
-- Home automation
-- Industrial motor control
-- IoT-based relay switching systems
+  // Rotate Motor Counterclockwise
+  Serial.println("Motor rotating counterclockwise...");
+  digitalWrite(dirPin, LOW); // Reverse direction
+  for (int x = 0; x < steps; x++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(speedDelayMicroseconds);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(speedDelayMicroseconds);
+  }
 
+  Serial.println("Motor rotation sequence complete.");
+}
 
+void loop() {
+  // Check for Serial Input
+  if (Serial.available() > 0) {
+    incomingCommand = Serial.readStringUntil('\n');
+    incomingCommand.trim(); // Remove any trailing newline characters
+
+    if (incomingCommand.equals("1000")) {
+      // Activate Relay
+      Serial.println("Activating relay...");
+      digitalWrite(relayPin, LOW);  // Turn relay on
+      delay(1000);                  // Keep relay on for 1 second
+      digitalWrite(relayPin, HIGH); // Turn relay off
+      Serial.println("Relay deactivated.");
+
+      // Rotate Motor
+      Serial.println("Starting motor rotation...");
+      startMotor(200, 800); // Adjust delay and steps as needed
+    } else {
+      // Invalid Input Handling
+      Serial.println("Invalid command. Send '1000' to activate the relay and rotate the motor.");
+    }
+  }
+}
